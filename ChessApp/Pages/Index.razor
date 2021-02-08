@@ -1,0 +1,167 @@
+﻿@page "/"
+
+@using ChessApp.Data
+@using ChessApp.Models
+@using DataAccessLib
+@using DataAccessLib.Models
+@using System.ComponentModel
+@using System.Linq
+
+@inject AuthenticationStateProvider AuthenticationStateProvider
+@inject IUserData dbUser
+@inject IRoomData dbRoom
+@inject SignalStateContainer SignalStateContainer
+@inject NavigationManager NavManager
+
+@if (AuthenticationState != null && AuthenticationState.User.Identity.IsAuthenticated)
+{
+    <div class="container-fluid p-0">
+
+        <div class="row vh-100 no-gutters">
+            <div class="col col-auto flex-grow-1">
+                <div class="container">
+
+                    <div class="row">
+                        <div class="col col-12 mx-auto my-5">
+
+                            <div class="card my-5 p-5 shadow-sm">
+
+                                @if (rooms == null)
+                                {
+                                    <p><em>Loading...</em></p>
+                                }
+                                else
+                                {
+                                    <h4 class="light-light-text mt-3 mb-4">Rooms</h4>
+
+                                    <table class="table table-borderless">
+                                        <thead>
+                                            <tr>
+                                                <th>#</th>
+                                                <th>Users</th>
+                                                <th class="text-right"></th>
+                                            </tr>
+                                        </thead>
+                                        <tbody>
+                                            @for (int i = 0; i < rooms.Count; i++)
+                                            {
+                                                var index = i;
+                                                <tr>
+                                                    <td>@rooms[i].Id</td>
+                                                    <td>
+                                                        <span>@string.Join(", ", rooms[i].Users.Select(x => x.Username).ToList())</span>
+                                                    </td>
+                                                    <td class="text-right">
+                                                        <button class="btn btn-sm bg-transparent" 
+                                                                @onclick="()=>JoinRoomBtnOnClick(index)">
+                                                            <strong class="primary-mid-text text-uppercase">Join</strong>
+                                                        </button>
+                                                    </td>
+                                                </tr>
+                                            }
+                                        </tbody>
+                                    </table>
+                                }
+
+                            </div>
+
+                        </div>
+                    </div>
+                    
+                </div>
+            </div>
+            <div class="col col-auto side-container dark-light shadow">
+
+                <OnlineUsers></OnlineUsers>
+
+            </div>
+        </div>
+
+    </div>
+}
+else
+{
+
+    <ul class="nav flex-row justify-content-end px-3 dark-mid shadow">
+        <li class="nav-item p-2">
+            <a class="nav-link color-transition light-light-text dark-light-text-hover" href="signin">
+                Sign In
+            </a>
+        </li>
+        <li class="nav-item p-2">
+            <a class="nav-link color-transition light-light-text dark-light-text-hover" href="signup">
+                Sign Up
+            </a>
+        </li>
+    </ul>
+
+}
+
+@code {
+
+    private AuthenticationState AuthenticationState { get; set; }
+
+    private List<DataAccessLib.Models.Room> rooms;
+
+    protected override void OnInitialized()
+    {
+        UpdateState();
+
+        SignalStateContainer.PropertyChanged += OnSignalChanged;
+    }
+
+    private async void OnSignalChanged(object sender, PropertyChangedEventArgs e)
+    {
+        await InvokeAsync(() =>
+        {
+            UpdateState();
+        });
+    }
+
+    private async void UpdateState()
+    {
+        var stateProvider = AuthenticationStateProvider as CustomAuthenticationStateProvider;
+        AuthenticationState = await stateProvider.GetAuthenticationStateAsync();
+
+        if (AuthenticationState != null && AuthenticationState.User.Identity.IsAuthenticated)
+        {
+            rooms = await dbRoom.GetRooms();
+            StateHasChanged();
+        }
+    }
+
+    private async void JoinRoomBtnOnClick(int index)
+    {
+        var room = rooms[index];
+        var stateProvider = AuthenticationStateProvider as CustomAuthenticationStateProvider;
+
+        var users = await dbUser.GetUsersInRoom(room);
+        bool alreadyIsInRoom = false;
+        foreach (var u in users)
+        {
+            if (u.Id == stateProvider.LoggedUser.Id)
+                alreadyIsInRoom = true;
+        }
+
+        if (!alreadyIsInRoom)
+        {
+            await dbRoom.JoinRoom(stateProvider.LoggedUser, room);
+        }
+
+        await SignalStateContainer.JoinRoom(room.Id);
+
+        NavManager.NavigateTo(string.Format("/room/{0}", room.Id));
+    }
+
+    private async void LogoutBtnOnClick()
+    {
+        var stateProvider = AuthenticationStateProvider as CustomAuthenticationStateProvider;
+
+        await dbUser.SetUserStatus(stateProvider.LoggedUser, false);
+        stateProvider.Logout();
+        AuthenticationState = await stateProvider.GetAuthenticationStateAsync();
+
+        StateHasChanged();
+        NavManager.NavigateTo("/");
+    }
+}

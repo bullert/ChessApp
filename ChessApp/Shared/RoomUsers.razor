@@ -1,0 +1,89 @@
+﻿
+@using ChessApp.Data
+@using ChessApp.Models
+@using DataAccessLib
+@using DataAccessLib.Models
+@using System.ComponentModel;
+
+@inject AuthenticationStateProvider AuthenticationStateProvider
+@inject IUserData dbUser
+@inject IRoomData dbRoom
+@inject SignalStateContainer SignalStateContainer
+@inject NavigationManager NavManager
+
+@if (AuthenticationState != null && AuthenticationState.User.Identity.IsAuthenticated)
+{
+    @if (users == null)
+    {
+        <p><em>Loading...</em></p>
+    }
+    else
+    {
+        <ul class="nav flex-column px-3">
+            <li class="nav-item p-2">
+                <a href=""
+                   class="nav-link text-right color-transition light-light-text dark-light-text-hover"
+                   @onclick="LeaveRoomBtnOnClick">
+                    Leave
+                </a>
+            </li>
+
+            <li class="nav-item p-3 text-center">
+                <h7 class="dark-mid-text">Players in room</h7>
+            </li>
+
+            <li class="nav-item px-3">
+                @foreach (var u in users)
+                {
+                    <p class="light-light-text">@u.Username</p>
+                }
+            </li>
+        </ul>
+    }
+}
+
+@code {
+
+    private AuthenticationState AuthenticationState { get; set; }
+
+    [Parameter]
+    public string Id { get; set; }
+
+    private List<User> users;
+
+    protected override void OnInitialized()
+    {
+        UpdateState();
+
+        SignalStateContainer.PropertyChanged += OnSignalChanged;
+    }
+
+    private async void OnSignalChanged(object sender, PropertyChangedEventArgs e)
+    {
+        await InvokeAsync(() =>
+        {
+            UpdateState();
+        });
+    }
+
+    private async void UpdateState()
+    {
+        var stateProvider = AuthenticationStateProvider as CustomAuthenticationStateProvider;
+        AuthenticationState = await stateProvider.GetAuthenticationStateAsync();
+
+        if (AuthenticationState != null && AuthenticationState.User.Identity.IsAuthenticated)
+        {
+            users = await dbUser.GetUsersInRoom(new DataAccessLib.Models.Room { Id = int.Parse(Id) });
+            StateHasChanged();
+        }
+    }
+
+    private async void LeaveRoomBtnOnClick()
+    {
+        var stateProvider = AuthenticationStateProvider as CustomAuthenticationStateProvider;
+        await dbRoom.LeaveRoom(stateProvider.LoggedUser, new DataAccessLib.Models.Room { Id = int.Parse(Id) });
+        await SignalStateContainer.LeaveRoom(int.Parse(Id));
+        UpdateState();
+        NavManager.NavigateTo("/");
+    }
+}

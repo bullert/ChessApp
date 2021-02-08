@@ -1,0 +1,133 @@
+﻿@using Microsoft.JSInterop
+@using Chess.Board
+@using ChessApp.Data
+@using ChessApp.Shared.Components
+
+@inject IJSRuntime JSRuntime
+@inject CursorHandlerStateContainer CursorHandlerStateContainer
+@inject GameStateContainer GameStateContainer
+@inject AuthenticationStateProvider AuthenticationStateProvider
+
+<div class="chess-board-field @CursorClass @HoverClass @AllowedClass"
+     @ref="Reference"
+     @onmousedown="((MouseEventArgs) => OnMouseDown(MouseEventArgs, Reference))"
+     @onmousedown:stopPropagation="true"
+     @onmouseup="((MouseEventArgs) => OnMouseUp(MouseEventArgs, Reference))">
+
+    <div class="chess-board-field-indicator"></div>
+    <div class="chess-board-field-focus"></div>
+
+    @if (!Instance.IsEmpty)
+    {
+        <ChessPieceComponent Instance="Instance.OccupiedBy"></ChessPieceComponent>
+    }
+
+</div>
+
+@code {
+
+    [Parameter]
+    public ISquare Instance { get; set; }
+
+    private ElementReference Reference { get; set; }
+
+    private AuthenticationState AuthenticationState { get; set; }
+
+    protected string AllowedClass => IsAllowed ? "allowed" : "";
+
+    protected string HoverClass => CursorHandlerStateContainer.IsDragged ? "hover" : "";
+
+    protected string CursorClass =>
+        (!Instance.IsEmpty && IsMyPiece() && IsMyTurn()) ||
+        CursorHandlerStateContainer.IsDragged ? "cursor-grab" : "";
+
+    protected bool IsAllowed
+    {
+        get
+        {
+            if (!CursorHandlerStateContainer.IsDragged)
+                return false;
+
+            var pp = CursorHandlerStateContainer.Target.LegalMoves;
+            for (int i = 0; i < pp.Count; i++)
+            {
+                if (GameStateContainer.Game.Chessboard.GetSquare(pp[i].Destination) == Instance)
+                {
+                    return true;
+                }
+            }
+
+            return false;
+        }
+    }
+
+    protected bool IsMyTurn()
+    {
+        if (AuthenticationState == null || !AuthenticationState.User.Identity.IsAuthenticated)
+            return false;
+
+        var stateProvider = AuthenticationStateProvider as CustomAuthenticationStateProvider;
+        if (stateProvider.LoggedUser.Id != GameStateContainer.Game.CurrentPlayer.Id)
+            return false;
+
+        return true;
+    }
+
+    protected bool IsMyPiece()
+    {
+        if (Instance.OccupiedBy.Color != GameStateContainer.Game.CurrentPlayer.Color)
+            return false;
+
+        return true;
+    }
+
+    protected override async Task OnInitializedAsync()
+    {
+        var stateProvider = AuthenticationStateProvider as CustomAuthenticationStateProvider;
+        AuthenticationState = await stateProvider.GetAuthenticationStateAsync();
+
+        CursorHandlerStateContainer.PropertyChanged += async (s, e) =>
+        {
+            await InvokeAsync(() =>
+            {
+                StateHasChanged();
+            });
+        };
+    }
+
+    private void OnMouseDown(MouseEventArgs e, ElementReference r)
+    {
+        if (!Instance.IsEmpty)
+        {
+            if (!IsMyPiece() || !IsMyTurn())
+                return;
+
+            BindChessPiece(e, r);
+        }
+    }
+
+    private void OnMouseUp(MouseEventArgs e, ElementReference r)
+    {
+        if (CursorHandlerStateContainer.IsDragged && IsAllowed)
+        {
+            var pp = CursorHandlerStateContainer.Target.LegalMoves;
+
+            for (int i = 0; i < pp.Count; i++)
+            {
+                if (GameStateContainer.Game.Chessboard.GetSquare(pp[i].Destination) == Instance)
+                {
+                    pp[i].Execute();
+                    GameStateContainer.Game.MoveRegister.Register(pp[i]);
+                    GameStateContainer.Game.NextTurn();
+                }
+            }
+        }
+    }
+
+    private async void BindChessPiece(MouseEventArgs e, ElementReference r)
+    {
+        CursorHandlerStateContainer.BindElement(Instance.OccupiedBy);
+        await JSRuntime.InvokeVoidAsync("OnChessPieceGrab", e, r);
+    }
+
+}

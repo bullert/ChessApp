@@ -1,0 +1,155 @@
+﻿@page "/room/{Id}"
+
+@using ChessApp.Data
+@using ChessApp.Models
+@using DataAccessLib
+@using DataAccessLib.Models
+@using System.ComponentModel;
+@using Chess.Core;
+@using Microsoft.JSInterop
+
+@inject AuthenticationStateProvider AuthenticationStateProvider
+@inject SignalStateContainer SignalStateContainer
+@inject GameStateContainer GameStateContainer
+@inject CursorHandlerStateContainer CursorHandlerStateContainer
+@inject NavigationManager NavManager
+@inject IUserData dbUser
+@inject IRoomData dbRoom
+@inject IJSRuntime JSRuntime
+
+@if (AuthenticationState != null && AuthenticationState.User.Identity.IsAuthenticated)
+{
+    <div class="container-fluid p-0"
+         @onmousedown="@((MouseEventArgs) => OnMouseDown(MouseEventArgs))"
+         @onmouseup="@((MouseEventArgs) => OnMouseUp(MouseEventArgs))"
+         @onmousemove="@((MouseEventArgs) => OnMouseMove(MouseEventArgs))">
+
+        <div class="row vh-100 no-gutters">
+            <div class="col col-auto flex-grow-1">
+                <div class="container p-0">
+
+                    @if (GameHasStarted)
+                    {
+                        <div class="chessboard-container">
+                            <ChessApp.Shared.Components.ChessboardComponent></ChessApp.Shared.Components.ChessboardComponent>
+                        </div>
+                    }
+                    else
+                    {
+                        <div class="row">
+                            <div class="col col-12 mx-auto my-5">
+
+                                <div class="card my-5 p-5 shadow-sm">
+                                    <button disabled="@(!CanStart)"
+                                            class="btn mt-5 mb-3 px-5 primary-mid primary-light-hover text-white"
+                                            style="width: 180px;"
+                                            @onclick="StartGameBtnOnClick">
+                                        Start
+                                    </button>
+                                </div>
+
+                            </div>
+                        </div>
+                    }
+
+                </div>
+            </div>
+            <div class="col col-auto side-container dark-light shadow">
+
+                <RoomUsers Id="@Id" />
+
+            </div>
+        </div>
+
+    </div>
+}
+else
+{
+
+}
+
+@code {
+
+    [Parameter]
+    public string Id { get; set; }
+
+    private AuthenticationState AuthenticationState { get; set; }
+
+    private List<User> users;
+
+    private bool CanStart => users?.Count != 2 ? false : true;
+
+    private bool GameHasStarted => GameStateContainer.Game?.GameState == Chess.Enums.GameState.INITIALIZED ? false : true;
+
+    protected override async Task OnInitializedAsync()
+    {
+        var stateProvider = AuthenticationStateProvider as CustomAuthenticationStateProvider;
+        AuthenticationState = await stateProvider.GetAuthenticationStateAsync();
+
+        if (AuthenticationState != null && AuthenticationState.User.Identity.IsAuthenticated)
+        {
+            users = await dbUser.GetUsersInRoom(new DataAccessLib.Models.Room { Id = int.Parse(Id) });
+            
+            OnSignalChanged(null, null);
+
+            SignalStateContainer.PropertyChanged += OnSignalChanged;
+        }
+        else
+        {
+            NavManager.NavigateTo("/");
+        }
+    }
+
+    private async void OnSignalChanged(object sender, PropertyChangedEventArgs e)
+    {
+        await InvokeAsync(() =>
+        {
+            StateHasChanged();
+        });
+    }
+
+    private void StartGameBtnOnClick()
+    {
+        if (CanStart)
+        {
+            GameStateContainer.Game.AddPlayer(new Player(users[0].Id, Chess.Enums.Color.WHITE));
+            GameStateContainer.Game.AddPlayer(new Player(users[1].Id, Chess.Enums.Color.BLACK));
+            GameStateContainer.Game.Start();
+            OnSignalChanged(null, null);
+        }
+
+    }
+
+    private void OnMouseDown(MouseEventArgs e)
+    {
+        ReleaseChessPiece(e);
+    }
+
+    private void OnMouseUp(MouseEventArgs e)
+    {
+        GameStateContainer.Game.Solve();
+        ReleaseChessPiece(e);
+    }
+
+    private void OnMouseMove(MouseEventArgs e)
+    {
+        DragChessPiece(e);
+    }
+
+    public async void DragChessPiece(MouseEventArgs e)
+    {
+        if (CursorHandlerStateContainer.IsDragged)
+        {
+            await JSRuntime.InvokeVoidAsync("OnChessPieceDrag", e, null);
+        }
+    }
+
+    public async void ReleaseChessPiece(MouseEventArgs e)
+    {
+        if (CursorHandlerStateContainer.IsDragged)
+        {
+            CursorHandlerStateContainer.ReleaseElement();
+            await JSRuntime.InvokeVoidAsync("OnChessPieceDrop", e, null);
+        }
+    }
+}

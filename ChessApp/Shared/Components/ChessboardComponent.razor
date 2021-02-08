@@ -1,0 +1,100 @@
+﻿@using Microsoft.JSInterop
+@using Chess.Board
+@using Chess.Enums
+@using Chess.Core
+@using ChessApp.Data
+
+@inject IJSRuntime JSRuntime
+@inject GameStateContainer GameStateContainer
+@inject AuthenticationStateProvider AuthenticationStateProvider
+
+<div class="chess-board select-none">
+
+    <div class="chess-board-row">
+
+        <div></div>
+
+        @for (int i = 0; i < GameStateContainer.Game.Chessboard.Length; i++)
+        {
+            <div class="chess-board-file-label"></div>
+        }
+
+        <div></div>
+
+    </div>
+
+    @for (int i = 0; i < GameStateContainer.Game.Chessboard.Length; i++)
+    {
+        int len = GameStateContainer.Game.Chessboard.Length - 1;
+        int rank = @GetPlayerIndicator().Rank > 0 ? len - i : i;
+
+        <div class="chess-board-row">
+
+            <div class="chess-board-rank-label">
+                <p>@(new Position(0, rank).RankLabel)</p>
+            </div>
+
+            @for (int j = 0; j < GameStateContainer.Game.Chessboard.Length; j++)
+            {
+                int file = @GetPlayerIndicator().File > 0 ? j : len - j;
+                ISquare square = GameStateContainer.Game.Chessboard.GetSquare(new Position(file, rank));
+
+                <ChessboardSquareComponent Instance="square"></ChessboardSquareComponent>
+            }
+
+            <div class="chess-board-rank-label"></div>
+
+        </div>
+    }
+
+    <div class="chess-board-row">
+
+        <div></div>
+
+        @for (int i = 0; i < GameStateContainer.Game.Chessboard.Length; i++)
+        {
+            int len = GameStateContainer.Game.Chessboard.Length - 1;
+            int file = @GetPlayerIndicator().File > 0 ? i : len - i;
+
+            <div class="chess-board-file-label">
+                <p>@(new Position(file, 0).FileLabel)</p>
+            </div>
+        }
+
+        <div></div>
+
+    </div>
+
+</div>
+
+@code {
+
+    private AuthenticationState AuthenticationState { get; set; }
+
+    protected override async Task OnInitializedAsync()
+    {
+        var stateProvider = AuthenticationStateProvider as CustomAuthenticationStateProvider;
+        AuthenticationState = await stateProvider.GetAuthenticationStateAsync();
+
+        GameStateContainer.PropertyChanged += async (s, e) =>
+        {
+            await InvokeAsync(() =>
+            {
+                StateHasChanged();
+            });
+        };
+    }
+
+    private Color GetPlayerColor()
+    {
+        var stateProvider = AuthenticationStateProvider as CustomAuthenticationStateProvider;
+
+        return GameStateContainer.Game?.GetPlayer(stateProvider.LoggedUser.Id)?.Color ?? Color.WHITE;
+    }
+
+    private IPosition GetPlayerIndicator()
+    {
+        return GameStateContainer?.Game?.Chessboard?.ColorMatrixDict[GetPlayerColor()]?.Indicator ?? new Position(1, 1);
+    }
+
+} 

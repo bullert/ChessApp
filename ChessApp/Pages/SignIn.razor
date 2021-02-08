@@ -1,0 +1,137 @@
+﻿@page "/signin"
+
+@using ChessApp.Data
+@using DataAccessLib
+@using DataAccessLib.Models
+
+@inject AuthenticationStateProvider AuthenticationStateProvider
+@inject IUserData dbUser
+@inject SignalStateContainer SignalStateContainer
+@inject NavigationManager NavManager
+
+<ul class="nav flex-row justify-content-end px-3 dark-mid shadow">
+    <li class="nav-item p-2">
+        <a class="nav-link color-transition light-light-text dark-light-text-hover" href="signin">
+            Sign In
+        </a>
+    </li>
+    <li class="nav-item p-2">
+        <a class="nav-link color-transition light-light-text dark-light-text-hover" href="signup">
+            Sign Up
+        </a>
+    </li>
+</ul>
+
+<div class="container">
+
+    <div class="row">
+        <div class="col col-12 col-lg-8 col-xl-6 mx-auto my-5">
+
+            <div class="card my-5 p-5 shadow-sm">
+
+                <h4 class="light-light-text mt-3 mb-4">Sign In</h4>
+
+                <EditForm id="sign-in" EditContext="@editContext" OnSubmit="OnSubmit">
+                    <DataAnnotationsValidator />
+
+                    <div class="form-group my-1">
+                        <label for="username" class="light-dark-text">Username</label>
+
+                        <InputText id="username"
+                                   class="form-control bg-transition light-mid light-dark-focus"
+                                   @bind-Value="model.Username" />
+
+                        <div class="text-right">
+                            <ValidationMessage For="@(() => model.Username)" />
+                        </div>
+                    </div>
+
+                    <div class="form-group my-1">
+                        <label for="password" class="light-dark-text">Password</label>
+
+                        <InputText type="password"
+                                   id="password"
+                                   class="form-control bg-transition light-mid light-dark-focus"
+                                   @bind-Value="@model.Password" />
+
+                        <div class="validation-message-container text-right">
+                            <ValidationMessage For="@(() => model.Password)" />
+                        </div>
+                    </div>
+
+                    <button type="submit" 
+                            class="btn mt-5 mb-3 px-5 primary-mid primary-light-hover text-white">
+                        Sign in
+                    </button>
+
+                </EditForm>
+
+            </div>
+
+        </div>
+    </div>
+
+</div>
+
+@code {
+
+    private AuthenticationState AuthenticationState { get; set; }
+
+    private EditContext editContext;
+
+    private User model;
+
+    ValidationMessageStore messages;
+
+    protected override async Task OnInitializedAsync()
+    {
+        var stateProvider = AuthenticationStateProvider as CustomAuthenticationStateProvider;
+        AuthenticationState = await stateProvider.GetAuthenticationStateAsync();
+
+        if (AuthenticationState != null && AuthenticationState.User.Identity.IsAuthenticated)
+        {
+            NavManager.NavigateTo("/");
+        }
+
+        model = new User();
+        editContext = new EditContext(model);
+        messages = new ValidationMessageStore(editContext);
+    }
+
+    private async void OnSubmit()
+    {
+        messages.Clear();
+
+        if (model.Username != null && model.Password != null)
+        {
+            var result = await dbUser.GetUserByName(model.Username);
+
+            if (result.Count > 0)
+            {
+                var hashedPassword = result[0].Password;
+
+                if (SecurePasswordHasher.Verify(model.Password, hashedPassword))
+                {
+                    var stateProvider = AuthenticationStateProvider as CustomAuthenticationStateProvider;
+                    stateProvider.Authenticate(result[0]);
+
+                    await dbUser.SetUserStatus(stateProvider.LoggedUser, true);
+                    await SignalStateContainer.Run(result[0].Id);
+
+                    model = new User();
+                    NavManager.NavigateTo("/");
+                    return;
+                }
+            }
+        }
+
+        FieldIdentifier usernameField = editContext.Field("Username"),
+                        passwordField = editContext.Field("Password");
+
+        messages.Add(usernameField, string.Empty);
+        messages.Add(passwordField, "Invalid username or password");
+
+        editContext.NotifyFieldChanged(usernameField);
+        editContext.NotifyFieldChanged(passwordField);
+    }
+}

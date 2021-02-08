@@ -1,0 +1,44 @@
+﻿@using Microsoft.JSInterop
+@using Chess.Pieces
+@using ChessApp.Data
+
+@inject IJSRuntime JSRuntime
+@inject CursorHandlerStateContainer CursorHandlerStateContainer
+@inject GameStateContainer GameStateContainer
+
+<div class="chess-piece @ColorClass">
+
+    @switch (Instance.GetType().Name)
+    {
+        case "Pawn":
+            <PawnComponent></PawnComponent>
+            break;
+        case "Knight":
+            <KnightComponent></KnightComponent>
+            break;
+        case "Bishop":
+            <BishopComponent></BishopComponent>
+            break;
+        case "Rook":
+            <RookComponent></RookComponent>
+            break;
+        case "Queen":
+            <QueenComponent></QueenComponent>
+            break;
+        case "King":
+            <KingComponent></KingComponent>
+            break;
+        default:
+            break;
+    }
+
+</div>
+
+@code {
+
+    [Parameter]
+    public IPiece Instance { get; set; }
+
+    public string ColorClass => string.Format("chess-piece-{0}", Instance.Color.ToString().ToLower());
+
+}

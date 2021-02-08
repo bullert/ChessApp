@@ -1,0 +1,140 @@
+﻿@page "/signup"
+
+@using ChessApp.Data
+@using ChessApp.Models
+@using DataAccessLib
+@using DataAccessLib.Models
+@using System.Security.Cryptography
+
+@inject AuthenticationStateProvider AuthenticationStateProvider
+@inject IUserData userData
+@inject NavigationManager NavManager
+
+<ul class="nav flex-row justify-content-end px-3 dark-mid shadow">
+    <li class="nav-item p-2">
+        <a class="nav-link color-transition light-light-text dark-light-text-hover" href="signin">
+            Sign In
+        </a>
+    </li>
+    <li class="nav-item p-2">
+        <a class="nav-link color-transition light-light-text dark-light-text-hover" href="signup">
+            Sign Up
+        </a>
+    </li>
+</ul>
+
+<div class="container">
+
+    <div class="row">
+        <div class="col col-12 col-lg-8 col-xl-6 mx-auto my-5">
+
+            <div class="card my-5 p-5 shadow-sm">
+
+                <h4 class="light-light-text mt-3 mb-4">Sign Up</h4>
+
+                <EditForm id="sign-up" EditContext="@editContext" OnSubmit="OnSubmit">
+                    <DataAnnotationsValidator />
+
+                    <div class="form-group my-1">
+                        <label for="username" class="light-dark-text">Username</label>
+
+                        <InputText id="username"
+                                   class="form-control bg-transition light-mid light-dark-focus"
+                                   @bind-Value="model.Username"
+                                   @onblur="CheckUsernameAvailability" />
+
+                        <div class="text-right">
+                            <ValidationMessage For="@(() => model.Username)" />
+                        </div>
+                    </div>
+
+                    <div class="form-group my-1">
+                        <label for="password" class="light-dark-text">Password</label>
+
+                        <InputText type="password"
+                                   id="password"
+                                   class="form-control bg-transition light-mid light-dark-focus"
+                                   @bind-Value="@model.Password" />
+
+                        <div class="validation-message-container text-right">
+                            <ValidationMessage For="@(() => model.Password)" />
+                        </div>
+                    </div>
+
+                    <button type="submit"
+                            class="btn mt-5 mb-3 px-5 primary-mid primary-light-hover text-white">
+                        Sign up
+                    </button>
+
+                </EditForm>
+
+            </div>
+
+        </div>
+    </div>
+
+</div>
+
+@code {
+
+    private AuthenticationState AuthenticationState { get; set; }
+
+    private EditContext editContext;
+
+    private UserValidation model;
+
+    ValidationMessageStore messages;
+
+    private async void CheckUsernameAvailability()
+    {
+        var field = editContext.Field("Username");
+        var errors = editContext.GetValidationMessages(field).ToList();
+
+        messages.Clear();
+
+        if (errors.Count > 1)
+            return;
+
+        var result = await userData.GetUserByName(model.Username);
+
+        if (result.Count > 0)
+        {
+            messages.Add(field, "This username is already occupied");
+        }
+
+        editContext.NotifyFieldChanged(field);
+    }
+
+    private async void OnSubmit()
+    {
+        CheckUsernameAvailability();
+
+        if (editContext.Validate())
+        {
+            var user = new User
+            {
+                Username = model.Username,
+                Password = SecurePasswordHasher.Hash(model.Password)
+            };
+
+            await userData.InsertUser(user);
+            model = new UserValidation();
+            NavManager.NavigateTo("/signin");
+        }
+    }
+
+    protected override async Task OnInitializedAsync()
+    {
+        var stateProvider = AuthenticationStateProvider as CustomAuthenticationStateProvider;
+        AuthenticationState = await stateProvider.GetAuthenticationStateAsync();
+
+        if (AuthenticationState != null && AuthenticationState.User.Identity.IsAuthenticated)
+        {
+            NavManager.NavigateTo("/");
+        }
+
+        model = new UserValidation();
+        editContext = new EditContext(model);
+        messages = new ValidationMessageStore(editContext);
+    }
+}

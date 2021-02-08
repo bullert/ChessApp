@@ -1,0 +1,22 @@
+﻿@inherits LayoutComponentBase
+
+@using ChessApp.Data
+
+@inject AuthenticationStateProvider AuthenticationStateProvider
+
+<div class="main">
+
+    @Body
+
+</div>
+
+@code {
+
+    private AuthenticationState AuthenticationState { get; set; }
+
+    protected override async Task OnInitializedAsync()
+    {
+        var stateProvider = AuthenticationStateProvider as CustomAuthenticationStateProvider;
+        AuthenticationState = await stateProvider.GetAuthenticationStateAsync();
+    }
+}

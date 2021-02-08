@@ -1,0 +1,143 @@
+﻿
+.chess-board {
+    position: relative;
+    width: 100%;
+    height: 100%;
+    display: grid;
+    grid-template: .4fr repeat(8, 1fr) .4fr / 1fr;
+    background: #c1c8d1;
+    color: #5a697c;
+}
+
+.chess-board-row {
+    display: grid;
+    grid-template: 1fr / .4fr repeat(8, 1fr) .4fr;
+}
+
+    .chess-board-row > * {
+        width: 100%;
+        width: 100%;
+        display: flex;
+        justify-content: center;
+        align-items: center;
+    }
+
+    .chess-board-row p {
+        margin: 0;
+        font-size: 1.8vmin;
+    }
+
+.chess-board-field {
+    position: relative;
+}
+    
+    .chess-board-field-focus {
+        position: absolute;
+        width: 100%;
+        height: 100%;
+        background: transparent;
+        border: solid 7px transparent;
+    }
+
+    .chess-board-field.hover:hover .chess-board-field-focus {
+        border-color: rgba(0, 0, 0, .36);
+    }
+
+    .chess-board-field * {
+        pointer-events: none;
+    }
+
+.chess-board-row:nth-child(even) .chess-board-field:nth-child(even) {
+    background: #5a697c;
+}
+
+.chess-board-row:nth-child(odd) .chess-board-field:nth-child(odd) {
+    background: #5a697c;
+}
+
+.chess-board-field-indicator {
+    position: absolute;
+    width: 30%;
+    height: 30%;
+    top: 50%;
+    left: 50%;
+    transform: translate(-50%, -50%);
+    z-index: 98;
+    border-radius: 50%;
+}
+
+.chess-board-field.allowed .chess-board-field-indicator {
+    background: rgba(0, 0, 0, .12);
+}
+
+.chess-piece {
+    position: absolute;
+    width: 100%;
+    height: 100%;
+    z-index: 99;
+    box-sizing: padding-box;
+}
+
+    .chess-piece svg {
+        position: absolute;
+        transform: translate(0, -2px) scale(1, 1);
+    }
+
+        .chess-piece svg:nth-child(2) {
+            position: absolute;
+            transform: translate(0, -2px) scale(-1, 1);
+        }
+
+    .chess-piece.dragged {
+        z-index: 100 !important;
+    }
+
+    .chess-piece.hidden {
+        visibility: hidden;
+    }
+
+.chess-piece-white {
+}
+
+    .chess-piece-white .chess-piece-color-1 {
+        stroke: #ddeeee;
+        fill: #ddeeee;
+    }
+
+    .chess-piece-white .chess-piece-color-2 {        
+        stroke: #ffffff;
+        fill: #ffffff;
+    }
+
+    .chess-piece-white .chess-piece-color-3 {
+        stroke: #bfdbdd;
+        fill: #bfdbdd;
+    }
+
+    .chess-piece-white .chess-piece-color-4 {        
+        stroke: #deeeee;
+        fill: #deeeee;
+    }
+
+.chess-piece-black {
+}
+
+    .chess-piece-black .chess-piece-color-1 {        
+        stroke: #2d333f;
+        fill: #2d333f;
+    }
+
+    .chess-piece-black .chess-piece-color-2 {
+        stroke: #39434f;
+        fill: #39434f;
+    }
+
+    .chess-piece-black .chess-piece-color-3 {
+        stroke: #222933;
+        fill: #222933;
+    }
+
+    .chess-piece-black .chess-piece-color-4 {        
+        stroke: #2c343f;
+        fill: #2c343f;
+    }

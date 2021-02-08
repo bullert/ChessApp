@@ -1,0 +1,122 @@
+﻿
+.bg-transition {
+    transition: background ease .5s;
+}
+
+.color-transition {
+    transition: color ease .5s;
+}
+
+
+/*light*/
+
+.light-light {
+    background: #f9fbfa;
+}
+.light-light-text {
+    color: #bac2c4;
+}
+.light-light-hover:hover {
+    background: #f9fbfa;
+}
+.light-light-text-hover:hover {
+    color: #bac2c4;
+}
+.light-light-focus:focus {
+    background: #f9fbfa;
+}
+.light-light-text-focus:focus {
+    color: #bac2c4;
+}
+
+.light-mid {
+    background: #ecf0f1;
+}
+.light-mid-text {
+    color: #849aa2;
+}
+.light-mid-hover:hover {
+    background: #ecf0f1;
+}
+.light-mid-text-hover:hover {
+    color: #849aa2;
+}
+.light-mid-focus:focus {
+    background: #ecf0f1;
+}
+.light-mid-text-focus:focus {
+    color: #849aa2;
+}
+
+.light-dark {
+    background: #e2e7ea;
+}
+.light-dark-text {
+    color: #586c77;
+}
+.light-dark-hover:hover {
+    background: #e2e7ea;
+}
+.light-dark-text-hover:hover {
+    color: #586c77;
+}
+.light-dark-focus:focus {
+    background: #e2e7ea;
+}
+.light-dark-text-focus:focus {
+    color: #586c77;
+}
+
+
+/*dark*/
+
+/*#1f3e4d*/
+.dark-light {
+    background: #2c4049;
+}
+.dark-light-text {
+    color: #dceaf0;
+}
+.dark-light-hover:hover {
+    background: #2c4049;
+}
+.dark-light-text-hover:hover {
+    color: #dceaf0;
+}
+
+.dark-mid {
+    background: #253741;
+}
+.dark-mid-text {
+    color: #95a6ae;
+}
+
+.dark-dark {
+    background: #14252d;
+}
+.dark-dark-text {
+    color: #4f6269;
+}
+
+
+/*primary*/
+
+.primary-light {
+    background: #8fcfea;
+}
+.primary-light-text {
+    color: #8fcfea;
+}
+.primary-light-hover:hover {
+    background: #8fcfea;
+}
+.primary-light-text-hover:hover {
+    color: #8fcfea;
+}
+
+.primary-mid {
+    background: #65bde3;
+}
+.primary-mid-text {
+    color: #65bde3;
+}
